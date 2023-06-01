@@ -1,0 +1,4 @@
+openai
+plotly
+python-dotenv
+seaborn
