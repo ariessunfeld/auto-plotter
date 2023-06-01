@@ -16,6 +16,9 @@ CODE_SAFETY_SYSTEM_DESCRIPTION = 'You are a code safety analyst. You analyze pyt
 
 
 def check_file_exists():
+    """
+    Check if 'error-handling-output.py' exists and change the state of the 'View Code' and 'Execute Code' buttons accordingly.
+    """
     if not os.path.exists('error-handling-output.py'):
         view_button['state'] = 'disabled'
         execute_button['state'] = 'disabled'
@@ -24,6 +27,11 @@ def check_file_exists():
         execute_button['state'] = 'normal'
 
 def process_openai_response(response):
+    """
+    Process the OpenAI response and return the assistant's response as a string.
+    :param response: The response from OpenAI API.
+    :return: The content from the assistant's response.
+    """
     assistant_response = response.choices[0].message["content"]
     assistant_lines = assistant_response.split('\n')
 
@@ -33,10 +41,19 @@ def process_openai_response(response):
     return assistant_response
 
 def write_file(filename, content):
+    """
+    Write a given content to a file.
+    :param filename: The name of the file to write to.
+    :param content: The content to write to the file.
+    """
     with open(filename, 'w') as file:
         file.write(content)
 
 def delete_files(*filenames):
+    """
+    Delete specified files.
+    :param filenames: File names to delete.
+    """
     for filename in filenames:
         try:
             os.remove(filename)
@@ -44,6 +61,9 @@ def delete_files(*filenames):
             print(err)
 
 def send_message():
+    """
+    Function to manage user messages, perform OpenAI completions, process responses, and update GUI accordingly.
+    """
     message = user_input.get()
     conversation.insert(tk.END, "You: " + message + "\n")
     user_input.delete(0, tk.END)
@@ -111,15 +131,18 @@ def send_message():
     check_file_exists()
 
 def view_output():
+    """
+    Function to view the content of 'error-handling-output.py' file in the GUI.
+    """
     with open('error-handling-output.py', 'r') as file:
         content = file.read()
     conversation.insert(tk.END, "error-handling-output.py content:\n", "bold")
     conversation.insert(tk.END, content + "\n")
 
 def execute_output():
-    #output = subprocess.check_output(['python3', 'error-handling-output.py']).decode('utf-8')
-    #conversation.insert(tk.END, "Execution result:\n", "bold")
-    #conversation.insert(tk.END, output + "\n")
+    """
+    Function to execute the code in the 'error-handling-output.py' file.
+    """
     with open("error-handling-output.py", "r") as f:
         script_code = f.read()
     try:
@@ -130,6 +153,9 @@ def execute_output():
         conversation.insert(tk.END, str(err) + "\n")
 
 def save_chat_history():
+    """
+    Function to save the chat history into a text file.
+    """
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"chat_history_{timestamp}.txt"
     with open(filename, 'w') as file:
@@ -140,6 +166,9 @@ def save_chat_history():
             pass
 
 def exit_program():
+    """
+    Function to save chat history and close the application.
+    """
     save_chat_history()
     root.destroy()
 
