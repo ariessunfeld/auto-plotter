@@ -20,29 +20,29 @@ Some example requests are listed below. For each of these requests, Auto Plotter
 
 Auto Plotter requires that you have Python and Pip installed on your computer, and that you have an OpenAI API key. The API key is free to obtain, but a payment method is required, as you will be charged a tiny amount (one or two cents) for typical usage.
 
-## Python Installation
+## Installing Python
 
 If you don't have it already, download and install python from https://www.python.org/downloads/. There should be a yellow Download button for the latest version. When installing, make sure to add python to PATH if prompted.
 
-## Pip Installation
+## Installing Pip
 
 Open the terminal or command prompt, execute `curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py`, then execute `python3 get-pip.py` and follow the installation prompts. Pip should now be installed on your system.
 
-## OpenAI API key
+## Getting an OpenAI API Key
 
 If you don't have an OpenAI API key already, go to platform.openai.com/account/api-keys. If you don't have an OpenAI account yet, you will have to sign up with your email. Then follow the instructions to add a payment method. You can set a usage limit so that no more than $X is charged to your card each month. For typical usage of Auto Plotter, a usage limit of $5 should be more than enough.
 
-## Cloning repository
+## Cloning the Repository
 
 If you have Git installed on your computer, copy the cloning link for this repository, then open the terminal or command prompt and run `git clone link-goes-here`. If you prefer to simply download the code as a zip file, you can do that, too.
 
-## Environment setup
+## Setting up the Environment (.env)
 
 Open the Finder or File Browser and unzip the code directory (folder) (if you didn't clone the repository with Git). Open a new terminal or command prompt and navigate into the auto-plotter directory. (To navigate in the terminal or command promot, use `cd`.)Then execute `ls` on Mac, or `dir` on Windows to ensure that you have these files: `requirements.txt`, `template.env`, and `auto-plotter.py`. Open `template.env` and replace the text `your-api-key-goes-here` with your full API key from OpenAI. Then rename `template.env` to `.env`. You can do this in the terminal or command prompt by executing the following command: `mv template.env .env`. 
 
-## Installing dependencies
+## Installing Dependencies
 
-### Creating a virtual environment
+### Creating a Virtual Environment
 
 It's recommended to install dependencies in a virtual environment to avoid conflicts with other packages you might have installed. To do this, navigate into the auto-plotter directory on the terminal or command prompt, then run `python3 -m venv venv`. This will create a folder called `venv`. To activate the new virtual environment you just created, run `source venv/bin/activate` (on macOS) or `.\venv\Scripts\activate` (on Windows). 
 
