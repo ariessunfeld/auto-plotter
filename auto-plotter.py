@@ -10,10 +10,25 @@ load_dotenv()
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
-DATA_VIZ_SYSTEM_DESCRIPTION = "You are a helpful data visualization assistant. I am going to describe what kind of visualizations I want, and you will respond with exactly the python code necessary to generate these visualizations, and no other output. You can assume I have matplotlib, numpy, pandas, plotly, and seaborn installed. All plots should be made with high resolution, labeled clearly, and saved to disk. Your output will be put directly into a python file to be executed, so do not include any unecessary commentary."
-ERROR_HANDLING_SYSTEM_DESCRIPTION = 'You specialize in adding error handling to python code. The code you will receive is going to be called as a string inside an `exec` function in a larger python script. Your job is to add error handling to each file-read or file-write line. Error handling should raise Exceptions with informative messages if files cannot be read, if columns do not exist in dataframes, or anything similar. For example, if a FileNotFoundError is going to be raised, then raise a FileNotFoundError with an informative message, including the name of the file not found. If files are being written, error handling should ensure that no file with the same name already exists, and if it does, should prompt the user for confirmation before overwriting. You should add this error handling to the python code you receive, and respond with the updated code, but nothing else: no commentary.'
-CODE_SAFETY_SYSTEM_DESCRIPTION = 'You are a code safety analyst. You analyze python code and ensure that nothing harmful or unusual will take place if the code is executed. You expect the code to be a data visualization script, usually a combination of reading spreadsheets and creating and saving plots. If you deem the code safe to run, you will respond with "All clear" and nothing else. Otherwise, if you see anything suspicious or concerning, you will respond with "Dangerous. Do not proceed" and nothing else.'
+def read_file_contents(filename):
+    """
+    Read the content of a file and return it as a string.
+    :param filename: The name of the file to read.
+    :return: The content of the file.
+    """
+    with open(filename, 'r') as file:
+        content = file.read().strip()  # strip() removes any leading/trailing whitespace including newline chars
+    return content
 
+# define the file paths
+DATA_VIZ_SYSTEM_DESCRIPTION_FILE = 'data_viz_agent.txt'
+ERROR_HANDLING_SYSTEM_DESCRIPTION_FILE = 'error_handling_agent.txt'
+CODE_SAFETY_SYSTEM_DESCRIPTION_FILE = 'code_safety_agent.txt'
+
+# read the descriptions from the files
+DATA_VIZ_SYSTEM_DESCRIPTION = read_file_contents(DATA_VIZ_SYSTEM_DESCRIPTION_FILE)
+ERROR_HANDLING_SYSTEM_DESCRIPTION = read_file_contents(ERROR_HANDLING_SYSTEM_DESCRIPTION_FILE)
+CODE_SAFETY_SYSTEM_DESCRIPTION = read_file_contents(CODE_SAFETY_SYSTEM_DESCRIPTION_FILE)
 
 def check_file_exists():
     """
@@ -35,8 +50,17 @@ def process_openai_response(response):
     assistant_response = response.choices[0].message["content"]
     assistant_lines = assistant_response.split('\n')
 
-    if assistant_lines[0].strip() == "```python" and assistant_lines[-2].strip() == "```":
-        assistant_response = '\n'.join(assistant_lines[1:-2])
+    # Remove markdown syntax
+    try:
+        assistant_lines.remove('```python')
+    except ValueError:
+        pass
+    try:
+        assistant_lines.remove('```')
+    except ValueError:
+        pass
+
+    assistant_response = '\n'.join(assistant_lines)
 
     return assistant_response
 
@@ -122,6 +146,8 @@ def send_message():
     if safety_response.startswith('Dangerous'):
         print('WARNING: Code deemed dangerous. Removing python files from disk.')
         delete_files('output.py', 'error-handling-output.py')
+    else:
+        print('All clear.')
 
     previous_messages.extend([
         {"role": "user", "content": message},
@@ -157,11 +183,14 @@ def save_chat_history():
     Function to save the chat history into a text file.
     """
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"chat_history_{timestamp}.txt"
+    if not os.path.isdir('chat_history'):
+        os.mkdir('chat_history')
+    filename = os.path.join('chat_history',f"chat_history_{timestamp}.txt")
     with open(filename, 'w') as file:
         try:
-            file.write(conversation.get("1.0", tk.END))
-            print('Chat history saved to', filename)
+            if root.winfo_exists():  # Check if the Tk window exists
+                file.write(conversation.get("1.0", tk.END))
+                print('Chat history saved to', filename)
         finally:
             pass
 
@@ -174,7 +203,7 @@ def exit_program():
 
 if __name__ == '__main__':
 
-    atexit.register(save_chat_history)
+    #atexit.register(save_chat_history)
 
     print('Booting up...')
 
