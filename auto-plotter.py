@@ -147,7 +147,7 @@ def send_message():
     conversation.insert(tk.END, "\n\nCode Safety Assistant: ", "bold")
     conversation.insert(tk.END, safety_response + "\n")
 
-    if safety_response.startswith('Dangerous'):
+    if not safety_response.startswith('All clear'):
         print('WARNING: Code deemed dangerous. Removing python files from disk.')
         delete_files('output.py', 'error-handling-output.py')
     else:
