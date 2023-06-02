@@ -313,7 +313,7 @@ if __name__ == '__main__':
     root.title("Auto Plotter")
 
     style = ttk.Style()
-    style.configure('Placeholder.TEntry', foreground='grey')  # Configure Placeholder style
+    style.configure('Placeholder.TEntry', foreground='lightgrey')  # Configure Placeholder style
 
     frame = ttk.Frame(root, padding="10")
     frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
