@@ -28,7 +28,7 @@ Note that Auto Plotter DOES support follow-up messages. This means that if the p
 
 # Setup
 
-Auto Plotter requires that you have Python and Pip installed on your computer, and that you have an OpenAI API key. The API key is free to obtain, but a payment method is required, as you will be charged a tiny amount (one or two cents) for typical usage.
+Auto Plotter requires that you have Python and Pip installed on your computer, and that you have an OpenAI API key. The API key is free to obtain, but a payment method is required, as you will be charged (by OpenAI) a tiny amount (one or two cents) for typical usage.
 
 ## Installing Python
 
