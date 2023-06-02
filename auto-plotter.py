@@ -1,8 +1,8 @@
 import os
+import time
 import openai
 import tkinter as tk
 from tkinter import ttk
-import atexit
 from datetime import datetime
 from dotenv import load_dotenv
 
@@ -21,9 +21,10 @@ def read_file_contents(filename):
     return content
 
 # define the file paths
-DATA_VIZ_SYSTEM_DESCRIPTION_FILE = 'data_viz_agent.txt'
-ERROR_HANDLING_SYSTEM_DESCRIPTION_FILE = 'error_handling_agent.txt'
-CODE_SAFETY_SYSTEM_DESCRIPTION_FILE = 'code_safety_agent.txt'
+AGENTS_DIR = 'agents'
+DATA_VIZ_SYSTEM_DESCRIPTION_FILE = os.path.join(AGENTS_DIR, 'data_viz_agent.txt')
+ERROR_HANDLING_SYSTEM_DESCRIPTION_FILE =  os.path.join(AGENTS_DIR, 'error_handling_agent.txt')
+CODE_SAFETY_SYSTEM_DESCRIPTION_FILE =  os.path.join(AGENTS_DIR, 'code_safety_agent.txt')
 
 # read the descriptions from the files
 DATA_VIZ_SYSTEM_DESCRIPTION = read_file_contents(DATA_VIZ_SYSTEM_DESCRIPTION_FILE)
@@ -33,6 +34,8 @@ CODE_SAFETY_SYSTEM_DESCRIPTION = read_file_contents(CODE_SAFETY_SYSTEM_DESCRIPTI
 DATA_VIZ_MODEL = 'gpt-4'
 ERROR_HANDLING_MODEL = 'gpt-3.5-turbo'
 CODE_SAFETY_MODEL = 'gpt-3.5-turbo'
+
+VERBOSE = False
 
 def check_file_exists():
     """
@@ -93,8 +96,19 @@ def send_message():
     Function to manage user messages, perform OpenAI completions, process responses, and update GUI accordingly.
     """
     message = user_input.get()
-    conversation.insert(tk.END, "You: " + message + "\n")
+
+    # Update GUI
+    conversation.insert(tk.END, "You: ", "bold")
+    conversation.insert(tk.END, message + "\n")
     user_input.delete(0, tk.END)
+    
+    root.update_idletasks()
+
+    time.sleep(0.5)
+    conversation.insert(tk.END, "Data Viz Assistant: ", "bold")
+    conversation.insert(tk.END, "Thinking...")
+
+    root.update()
 
     print('Thinking...')
 
@@ -111,11 +125,26 @@ def send_message():
     write_file('output.py', assistant_response)
     print('Done thinking. Preliminary code written to output.py.')
 
-    conversation.insert(tk.END, "Data Viz Assistant:\n", "bold")
-    conversation.insert(tk.END, assistant_response + "\n")
+    if VERBOSE:
+        #conversation.delete(tk.END-11, tk.END)
+        conversation.delete("end - 12 chars", "end")
+        #conversation.insert(tk.END, "Data Viz Assistant:\n", "bold")
+        conversation.insert(tk.END, "Done thinking. Preliminary code was written to output.py.\n")
+        conversation.insert(tk.END, "\n" + assistant_response + "\n")
+        conversation.insert(tk.END, "Error Handling Assistant: ", "bold")
+        conversation.insert(tk.END, "Now polishing code with error handling...")
+    else:
+        #conversation.delete(tk.END-11, tk.END)
+        conversation.delete("end - 12 chars", "end")
+        #conversation.insert(tk.END, "Data Viz Assistant: ", "bold")
+        conversation.insert(tk.END, "Done thinking. Preliminary code was written to output.py.\n")
+        conversation.insert(tk.END, "Error Handling Assistant: ", "bold")
+        conversation.insert(tk.END, "Now polishing code with error handling...")
+
 
     root.update_idletasks()
-    print('Adding error handling to code...')
+
+    print('Now polishing code with error handling...')
 
     error_handling_response = openai.ChatCompletion.create(
         model=ERROR_HANDLING_MODEL,
@@ -127,13 +156,25 @@ def send_message():
 
     error_handling_response = process_openai_response(error_handling_response)
     write_file('error-handling-output.py', error_handling_response)
-    print('Done adding error handling. Finished code written to error-handling-output.py.')
+    print('Done adding error handling. Polished code was written to error-handling-output.py.')
 
-    conversation.insert(tk.END, "\n\nError Handling Assistant:\n", "bold")
-    conversation.insert(tk.END, error_handling_response + "\n")
+    if VERBOSE:
+        #conversation.delete(tk.END-41, tk.END)
+        conversation.delete("end - 42 chars", "end")
+        conversation.insert(tk.END, 'Done adding error handling. Polished code was written to error-handling-output.py.')
+        conversation.insert(tk.END, '\n' + error_handling_response + '\n')
+        conversation.insert(tk.END, "Code Safety Assistant: ", "bold")
+        conversation.insert(tk.END, "Now analyzing code safety...")
+    else:
+        #conversation.delete(tk.END-41, tk.END)
+        conversation.delete("end - 42 chars", "end")
+        conversation.insert(tk.END, "Done adding error handling. Polished code was written to error-handling-output.py.\n")
+        conversation.insert(tk.END, "Code Safety Assistant: ", "bold")
+        conversation.insert(tk.END, "Now analyzing code safety...")
 
     root.update_idletasks()
-    print('Analyzing code safety...')
+
+    print('Now analyzing code safety...')
 
     safety_response = openai.ChatCompletion.create(
         model=CODE_SAFETY_MODEL,
@@ -144,14 +185,36 @@ def send_message():
     )
 
     safety_response = safety_response.choices[0].message["content"]
-    conversation.insert(tk.END, "\n\nCode Safety Assistant: ", "bold")
-    conversation.insert(tk.END, safety_response + "\n")
 
     if not safety_response.startswith('All clear'):
         print('WARNING: Code deemed dangerous. Removing python files from disk.')
         delete_files('output.py', 'error-handling-output.py')
+
+        if VERBOSE:
+            #conversation.insert(tk.END, "\n\nCode Safety Assistant: ", "bold")
+            #conversation.delete(tk.END-28, tk.END)
+            conversation.delete("end - 29 chars", "end")
+            conversation.insert(tk.END, "WARNING: Code deemed dangerous. Deleting output.py and error-handling-output.py.")
+            conversation.insert(tk.END, '\n' + safety_response + "\n")
+        else:
+            #conversation.delete(tk.END-28, tk.END)
+            conversation.delete("end - 29 chars", "end")
+            conversation.insert(tk.END, "WARNING: Code deemed dangerous. Deleting output.py and error-handling-output.py.")
+            
     else:
         print('All clear.')
+
+        if VERBOSE:
+            #conversation.delete(tk.END-28, tk.END)
+            conversation.delete("end - 29 chars", "end")
+            conversation.insert(tk.END, "Code deemed safe.")
+            conversation.insert(tk.END, '\n' + safety_response + "\n")
+        else:
+            #conversation.delete(tk.END-28, tk.END)
+            conversation.delete("end - 29 chars", "end")
+            conversation.insert(tk.END, "Code deemed safe.\n")
+
+    root.update_idletasks()
 
     previous_messages.extend([
         {"role": "user", "content": message},
@@ -178,9 +241,14 @@ def execute_output():
     try:
         exec(script_code)
     except Exception as err:
-        print('Halting process due to error: ', err)
-        conversation.insert(tk.END, "Halting process due to error: \n", "bold")
-        conversation.insert(tk.END, str(err) + "\n")
+        print(err)
+        # Sometimes exec fails, maybe not as robust as full python interpreter
+        try:
+            os.system("python3 error-handling-output.py")
+        except Exception as err2:
+            print('Halting process due to error: ', err2)
+            conversation.insert(tk.END, "Halting process due to error: \n", "bold")
+            conversation.insert(tk.END, str(err2) + "\n")
 
 def save_chat_history():
     """
@@ -212,8 +280,16 @@ if __name__ == '__main__':
     print('Booting up...')
 
     gpt_4_access = input('Do you have access to the GPT4 OpenAI API? ([y]/n) ')
-    if gpt_4_access.lower() not in ['', 'y', 'yes']:
+    if gpt_4_access.lower() in ['', 'y', 'yes']:
+        DATA_VIZ_MODEL = 'gpt-4'
+    else:
         DATA_VIZ_MODEL = 'gpt-3.5-turbo'
+
+    verbose = input('Do you want to run in verbose mode? (y/[n]) ')
+    if verbose.lower() in ['y', 'yes']:
+        VERBOSE = True
+    else:
+        VERBOSE = False
 
     root = tk.Tk()
     root.title("Auto Plotter")
