@@ -32,7 +32,7 @@ CODE_SAFETY_SYSTEM_DESCRIPTION = read_file_contents(CODE_SAFETY_SYSTEM_DESCRIPTI
 
 DATA_VIZ_MODEL = 'gpt-4'
 ERROR_HANDLING_MODEL = 'gpt-3.5-turbo'
-CODE_SAFETY_MODEL = 'gpt-3.5-tubro'
+CODE_SAFETY_MODEL = 'gpt-3.5-turbo'
 
 def check_file_exists():
     """
