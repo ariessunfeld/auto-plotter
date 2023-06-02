@@ -36,6 +36,7 @@ ERROR_HANDLING_MODEL = 'gpt-3.5-turbo'
 CODE_SAFETY_MODEL = 'gpt-3.5-turbo'
 
 VERBOSE = False
+MAX_RETRIES = 3
 
 def check_file_exists():
     """
@@ -57,16 +58,23 @@ def process_openai_response(response):
     assistant_response = response.choices[0].message["content"]
     assistant_lines = assistant_response.split('\n')
 
-    # Remove markdown syntax
-    try:
-        assistant_lines.remove('```python')
-    except ValueError:
-        pass
-    try:
-        assistant_lines.remove('```')
-    except ValueError:
-        pass
+    # Strip any leading preamble before import statements
+    idx = 0
+    for i, line in enumerate(assistant_lines):
+        if line.startswith('import ') or line.startswith('from '):
+            idx = i
+            break
+    assistant_lines = assistant_lines[idx:]
 
+    # Strip any trailing commentary after the ``` markdown closer
+    try:
+        end = assistant_lines.index('```')
+    except ValueError:
+        end = -1
+    if end != -1:
+        assistant_lines = assistant_lines[:end]
+
+    # Reassemble the content
     assistant_response = '\n'.join(assistant_lines)
 
     return assistant_response
@@ -77,6 +85,7 @@ def write_file(filename, content):
     :param filename: The name of the file to write to.
     :param content: The content to write to the file.
     """
+    
     with open(filename, 'w') as file:
         file.write(content)
 
@@ -90,6 +99,34 @@ def delete_files(*filenames):
             os.remove(filename)
         except FileNotFoundError as err:
             print(err)
+
+def get_response(model: str, system_description: str, prev_msgs: list, msg: str, retries: int):
+    """
+    Get a response from the openai API
+    :param model: model to use in API call
+    :param system_description: description to use in model configuration
+    :param prev_msgs: list of previous messages
+    :param msg: message to send as user this time
+    :param retries: number of times this function has been called recursively, 
+        used to not exceed MAX_RETRIES
+    """
+    try:
+        response = openai.ChatCompletion.create(
+            model=model,
+            messages=[
+                {'role':'system', 'content':system_description},
+                *prev_msgs,
+                {'role':'user', 'content':msg}
+            ]
+        )
+        return response
+    except openai.error.RateLimitError:
+        if retries < MAX_RETRIES:
+            print('Encountered a RateLimitError. Retrying.')
+            return get_response(model, system_description, prev_msgs, msg, retries+1)
+        else:
+            print(f'Could not access the API at this time. Maximum retries ({MAX_RETRIES}) reached.')
+            return 'Could not access the API at this time.'
 
 def send_message():
     """
@@ -112,61 +149,41 @@ def send_message():
 
     print('Thinking...')
 
-    response = openai.ChatCompletion.create(
-        model=DATA_VIZ_MODEL,
-        messages=[
-            {"role": "system", "content": DATA_VIZ_SYSTEM_DESCRIPTION},
-            *previous_messages,
-            {"role": "user", "content": message},
-        ]
-    )
-    
+    response = get_response(
+        DATA_VIZ_MODEL, DATA_VIZ_SYSTEM_DESCRIPTION, previous_messages, message, 0)
     assistant_response = process_openai_response(response)
     write_file('output.py', assistant_response)
     print('Done thinking. Preliminary code written to output.py.')
 
     if VERBOSE:
-        #conversation.delete(tk.END-11, tk.END)
         conversation.delete("end - 12 chars", "end")
-        #conversation.insert(tk.END, "Data Viz Assistant:\n", "bold")
         conversation.insert(tk.END, "Done thinking. Preliminary code was written to output.py.\n")
         conversation.insert(tk.END, "\n" + assistant_response + "\n")
         conversation.insert(tk.END, "Error Handling Assistant: ", "bold")
         conversation.insert(tk.END, "Now polishing code with error handling...")
     else:
-        #conversation.delete(tk.END-11, tk.END)
         conversation.delete("end - 12 chars", "end")
-        #conversation.insert(tk.END, "Data Viz Assistant: ", "bold")
         conversation.insert(tk.END, "Done thinking. Preliminary code was written to output.py.\n")
         conversation.insert(tk.END, "Error Handling Assistant: ", "bold")
         conversation.insert(tk.END, "Now polishing code with error handling...")
-
 
     root.update_idletasks()
 
     print('Now polishing code with error handling...')
 
-    error_handling_response = openai.ChatCompletion.create(
-        model=ERROR_HANDLING_MODEL,
-        messages=[
-            {"role": 'system', "content": ERROR_HANDLING_SYSTEM_DESCRIPTION},
-            {"role": 'user', "content": assistant_response}
-        ]
-    )
-
-    error_handling_response = process_openai_response(error_handling_response)
+    response = get_response(
+        ERROR_HANDLING_MODEL, ERROR_HANDLING_SYSTEM_DESCRIPTION, [], assistant_response, 0)
+    error_handling_response = process_openai_response(response)
     write_file('error-handling-output.py', error_handling_response)
     print('Done adding error handling. Polished code was written to error-handling-output.py.')
 
     if VERBOSE:
-        #conversation.delete(tk.END-41, tk.END)
         conversation.delete("end - 42 chars", "end")
         conversation.insert(tk.END, 'Done adding error handling. Polished code was written to error-handling-output.py.')
         conversation.insert(tk.END, '\n' + error_handling_response + '\n')
         conversation.insert(tk.END, "Code Safety Assistant: ", "bold")
         conversation.insert(tk.END, "Now analyzing code safety...")
     else:
-        #conversation.delete(tk.END-41, tk.END)
         conversation.delete("end - 42 chars", "end")
         conversation.insert(tk.END, "Done adding error handling. Polished code was written to error-handling-output.py.\n")
         conversation.insert(tk.END, "Code Safety Assistant: ", "bold")
@@ -176,41 +193,32 @@ def send_message():
 
     print('Now analyzing code safety...')
 
-    safety_response = openai.ChatCompletion.create(
-        model=CODE_SAFETY_MODEL,
-        messages=[
-            {"role": 'system', "content": CODE_SAFETY_SYSTEM_DESCRIPTION},
-            {"role": 'user', "content": error_handling_response}
-        ]
-    )
+    response = get_response(
+        CODE_SAFETY_MODEL, CODE_SAFETY_SYSTEM_DESCRIPTION, [], error_handling_response, 0)
+    safety_response = response.choices[0].message["content"]
 
-    safety_response = safety_response.choices[0].message["content"]
-
+    # Dangerous case
     if not safety_response.startswith('All clear'):
         print('WARNING: Code deemed dangerous. Removing python files from disk.')
         delete_files('output.py', 'error-handling-output.py')
 
         if VERBOSE:
-            #conversation.insert(tk.END, "\n\nCode Safety Assistant: ", "bold")
-            #conversation.delete(tk.END-28, tk.END)
             conversation.delete("end - 29 chars", "end")
             conversation.insert(tk.END, "WARNING: Code deemed dangerous. Deleting output.py and error-handling-output.py.")
             conversation.insert(tk.END, '\n' + safety_response + "\n")
         else:
-            #conversation.delete(tk.END-28, tk.END)
             conversation.delete("end - 29 chars", "end")
             conversation.insert(tk.END, "WARNING: Code deemed dangerous. Deleting output.py and error-handling-output.py.")
-            
+   
+   # All clear case
     else:
         print('All clear.')
 
         if VERBOSE:
-            #conversation.delete(tk.END-28, tk.END)
             conversation.delete("end - 29 chars", "end")
             conversation.insert(tk.END, "Code deemed safe.")
             conversation.insert(tk.END, '\n' + safety_response + "\n")
         else:
-            #conversation.delete(tk.END-28, tk.END)
             conversation.delete("end - 29 chars", "end")
             conversation.insert(tk.END, "Code deemed safe.\n")
 
@@ -277,6 +285,12 @@ def exit_program():
     save_chat_history()
     root.destroy()
 
+def add_placeholder_to(entry, placeholder, color='grey'):
+    entry.insert(0, placeholder)
+    entry['style'] = 'Placeholder.TEntry'
+    entry.bind("<FocusIn>", lambda args: entry.delete('0', 'end') if entry.get() == placeholder else None)
+    entry.bind("<FocusOut>", lambda args: entry.insert('0', placeholder) if entry.get() == '' else None)
+
 if __name__ == '__main__':
 
     #atexit.register(save_chat_history)
@@ -295,6 +309,9 @@ if __name__ == '__main__':
     else:
         VERBOSE = False
 
+    style = ttk.Style()
+    style.configure('Placeholder.TEntry', foreground='grey')  # Configure Placeholder style
+
     root = tk.Tk()
     root.title("Auto Plotter")
 
@@ -307,6 +324,7 @@ if __name__ == '__main__':
 
     user_input = ttk.Entry(frame, width=70, font=("TkDefaultFont", 12))
     user_input.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+    add_placeholder_to(user_input, "start typing here")
 
     send_button = ttk.Button(frame, text="Send", command=send_message)
     send_button.grid(row=1, column=1, sticky=(tk.W, tk.E, tk.N, tk.S))
