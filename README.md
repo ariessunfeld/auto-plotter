@@ -16,7 +16,7 @@ It is always a good idea to review python code yourself before running it on you
 
 # Usage
 
-To launch Auto-Plotter, simply run `python3 auto-plotter.py` in the terminal or command prompt. Assuming the installation and setup process went smoothly, a GUI (graphical user interface) should open. In the text window at the very bottom of the GUI, you can type your request to Auto Plotter, and when you're ready, click send. If you reference files on your computer in your request, make sure that they are The status of the process will be displayed in the terminal or command prompt while Auto Plotter thinks about your message and then writes and validates code in response to your message.
+To launch Auto-Plotter, simply run `python3 auto-plotter.py` in the terminal or command prompt. Assuming the installation and setup process went smoothly, a GUI (graphical user interface) should open. In the text window at the very bottom of the GUI, you can type your request to Auto Plotter, and when you're ready, click send. If you reference files on your computer in your request, make sure that they are spelled correctly and present in the `data` folder. The status of the process will be displayed in the terminal or command prompt while Auto Plotter thinks about your message and then writes and validates code in response to your message.
 
 ## Example Usage
 
