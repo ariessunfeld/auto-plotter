@@ -135,15 +135,20 @@ def send_message():
     message = user_input.get()
 
     # Update GUI
+    conversation.configure(state='normal')
     conversation.insert(tk.END, "You: ", "bold")
     conversation.insert(tk.END, message + "\n")
+    conversation.configure(state='disabled')
     user_input.delete(0, tk.END)
     
     root.update_idletasks()
 
-    time.sleep(0.5)
+    time.sleep(1)
+
+    conversation.configure(state='normal')
     conversation.insert(tk.END, "Data Viz Assistant: ", "bold")
     conversation.insert(tk.END, "Thinking...")
+    conversation.configure(state='disabled')
 
     root.update()
 
@@ -156,16 +161,20 @@ def send_message():
     print('Done thinking. Preliminary code written to output.py.')
 
     if VERBOSE:
+        conversation.configure(state='normal')
         conversation.delete("end - 12 chars", "end")
         conversation.insert(tk.END, "Done thinking. Preliminary code was written to output.py.\n")
         conversation.insert(tk.END, "\n" + assistant_response + "\n")
         conversation.insert(tk.END, "Error Handling Assistant: ", "bold")
         conversation.insert(tk.END, "Now polishing code with error handling...")
+        conversation.configure(state='disabled')
     else:
+        conversation.configure(state='normal')
         conversation.delete("end - 12 chars", "end")
         conversation.insert(tk.END, "Done thinking. Preliminary code was written to output.py.\n")
         conversation.insert(tk.END, "Error Handling Assistant: ", "bold")
         conversation.insert(tk.END, "Now polishing code with error handling...")
+        conversation.configure(state='disabled')
 
     root.update_idletasks()
 
@@ -178,16 +187,20 @@ def send_message():
     print('Done adding error handling. Polished code was written to error-handling-output.py.')
 
     if VERBOSE:
+        conversation.configure(state='normal')
         conversation.delete("end - 42 chars", "end")
         conversation.insert(tk.END, 'Done adding error handling. Polished code was written to error-handling-output.py.')
         conversation.insert(tk.END, '\n' + error_handling_response + '\n')
         conversation.insert(tk.END, "Code Safety Assistant: ", "bold")
         conversation.insert(tk.END, "Now analyzing code safety...")
+        conversation.configure(state='disabled')
     else:
+        conversation.configure(state='normal')
         conversation.delete("end - 42 chars", "end")
         conversation.insert(tk.END, "Done adding error handling. Polished code was written to error-handling-output.py.\n")
         conversation.insert(tk.END, "Code Safety Assistant: ", "bold")
         conversation.insert(tk.END, "Now analyzing code safety...")
+        conversation.configure(state='disabled')
 
     root.update_idletasks()
 
@@ -203,24 +216,32 @@ def send_message():
         delete_files('output.py', 'error-handling-output.py')
 
         if VERBOSE:
+            conversation.configure(state='normal')
             conversation.delete("end - 29 chars", "end")
             conversation.insert(tk.END, "WARNING: Code deemed dangerous. Deleting output.py and error-handling-output.py.")
             conversation.insert(tk.END, '\n' + safety_response + "\n")
+            conversation.configure(state='disabled')
         else:
+            conversation.configure(state='normal')
             conversation.delete("end - 29 chars", "end")
             conversation.insert(tk.END, "WARNING: Code deemed dangerous. Deleting output.py and error-handling-output.py.")
+            conversation.configure(state='disabled')
    
    # All clear case
     else:
         print('All clear.')
 
         if VERBOSE:
+            conversation.configure(state='normal')
             conversation.delete("end - 29 chars", "end")
             conversation.insert(tk.END, "Code deemed safe.")
             conversation.insert(tk.END, '\n' + safety_response + "\n")
+            conversation.configure(state='disabled')
         else:
+            conversation.configure(state='normal')
             conversation.delete("end - 29 chars", "end")
             conversation.insert(tk.END, "Code deemed safe.\n")
+            conversation.configure(state='disabled')
 
     root.update_idletasks()
 
@@ -237,8 +258,10 @@ def view_output():
     """
     with open('error-handling-output.py', 'r') as file:
         content = file.read()
+    conversation.configure(state='normal')
     conversation.insert(tk.END, "error-handling-output.py content:\n", "bold")
     conversation.insert(tk.END, content + "\n")
+    conversation.configure(state='disabled')
 
 def execute_output():
     """
@@ -259,8 +282,10 @@ def execute_output():
                 print('Used os.system')
         except Exception as err2:
             print('Halting process due to error: ', err2)
+            conversation.configure(state='normal')
             conversation.insert(tk.END, "Halting process due to error: \n", "bold")
             conversation.insert(tk.END, str(err2) + "\n")
+            conversation.configure(state='disabled')
 
 def save_chat_history():
     """
@@ -273,7 +298,9 @@ def save_chat_history():
     with open(filename, 'w') as file:
         try:
             if root.winfo_exists():  # Check if the Tk window exists
+                conversation.configure(state='normal')
                 file.write(conversation.get("1.0", tk.END))
+                conversation.configure(state='disabled')
                 print('Chat history saved to', filename)
         finally:
             pass
@@ -321,6 +348,7 @@ if __name__ == '__main__':
     conversation = tk.Text(frame, wrap=tk.WORD, width=75, height=20, font=("TkDefaultFont", 12))
     conversation.tag_configure("bold", font=("TkDefaultFont", 12, "bold"))
     conversation.grid(row=0, column=0, columnspan=4, sticky=(tk.W, tk.E, tk.N, tk.S))
+    conversation.configure(state='disabled')
 
     user_input = ttk.Entry(frame, width=70, font=("TkDefaultFont", 12))
     user_input.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
