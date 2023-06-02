@@ -30,6 +30,10 @@ DATA_VIZ_SYSTEM_DESCRIPTION = read_file_contents(DATA_VIZ_SYSTEM_DESCRIPTION_FIL
 ERROR_HANDLING_SYSTEM_DESCRIPTION = read_file_contents(ERROR_HANDLING_SYSTEM_DESCRIPTION_FILE)
 CODE_SAFETY_SYSTEM_DESCRIPTION = read_file_contents(CODE_SAFETY_SYSTEM_DESCRIPTION_FILE)
 
+DATA_VIZ_MODEL = 'gpt-4'
+ERROR_HANDLING_MODEL = 'gpt-3.5-turbo'
+CODE_SAFETY_MODEL = 'gpt-3.5-tubro'
+
 def check_file_exists():
     """
     Check if 'error-handling-output.py' exists and change the state of the 'View Code' and 'Execute Code' buttons accordingly.
@@ -95,7 +99,7 @@ def send_message():
     print('Thinking...')
 
     response = openai.ChatCompletion.create(
-        model="gpt-4",
+        model=DATA_VIZ_MODEL,
         messages=[
             {"role": "system", "content": DATA_VIZ_SYSTEM_DESCRIPTION},
             *previous_messages,
@@ -114,7 +118,7 @@ def send_message():
     print('Adding error handling to code...')
 
     error_handling_response = openai.ChatCompletion.create(
-        model='gpt-3.5-turbo',
+        model=ERROR_HANDLING_MODEL,
         messages=[
             {"role": 'system', "content": ERROR_HANDLING_SYSTEM_DESCRIPTION},
             {"role": 'user', "content": assistant_response}
@@ -132,7 +136,7 @@ def send_message():
     print('Analyzing code safety...')
 
     safety_response = openai.ChatCompletion.create(
-        model='gpt-3.5-turbo',
+        model=CODE_SAFETY_MODEL,
         messages=[
             {"role": 'system', "content": CODE_SAFETY_SYSTEM_DESCRIPTION},
             {"role": 'user', "content": error_handling_response}
@@ -206,6 +210,10 @@ if __name__ == '__main__':
     #atexit.register(save_chat_history)
 
     print('Booting up...')
+
+    gpt_4_access = input('Do you have access to the GPT4 OpenAI API? ([y]/n) ')
+    if gpt_4_access.lower() not in ['', 'y', 'yes']:
+        DATA_VIZ_MODEL = 'gpt-3.5-turbo'
 
     root = tk.Tk()
     root.title("Auto Plotter")
