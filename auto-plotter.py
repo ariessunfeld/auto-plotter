@@ -239,12 +239,16 @@ def execute_output():
     with open("error-handling-output.py", "r") as f:
         script_code = f.read()
     try:
-        exec(script_code)
+        exec(script_code, {}, {})
+        if VERBOSE:
+            print('Used exec')
     except Exception as err:
         print(err)
         # Sometimes exec fails, maybe not as robust as full python interpreter
         try:
             os.system("python3 error-handling-output.py")
+            if VERBOSE:
+                print('Used os.system')
         except Exception as err2:
             print('Halting process due to error: ', err2)
             conversation.insert(tk.END, "Halting process due to error: \n", "bold")
