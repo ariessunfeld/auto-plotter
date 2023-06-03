@@ -1,10 +1,13 @@
 import os
+import sys
 import time
 import openai
 import tkinter as tk
 from tkinter import ttk
 from datetime import datetime
 from dotenv import load_dotenv
+
+from ingest import get_summary
 
 load_dotenv()
 
@@ -22,14 +25,22 @@ def read_file_contents(filename):
 
 # define the file paths
 AGENTS_DIR = 'agents'
-DATA_VIZ_SYSTEM_DESCRIPTION_FILE = os.path.join(AGENTS_DIR, 'data_viz_agent.txt')
-ERROR_HANDLING_SYSTEM_DESCRIPTION_FILE =  os.path.join(AGENTS_DIR, 'error_handling_agent.txt')
-CODE_SAFETY_SYSTEM_DESCRIPTION_FILE =  os.path.join(AGENTS_DIR, 'code_safety_agent.txt')
+DATA_VIZ_SYSTEM_DESCRIPTION_FILE = os.path.join(
+    AGENTS_DIR, 'data_viz_agent.txt')
+ERROR_HANDLING_SYSTEM_DESCRIPTION_FILE =  os.path.join(
+    AGENTS_DIR, 'error_handling_agent.txt')
+CODE_SAFETY_SYSTEM_DESCRIPTION_FILE =  os.path.join(
+    AGENTS_DIR, 'code_safety_agent.txt')
 
 # read the descriptions from the files
-DATA_VIZ_SYSTEM_DESCRIPTION = read_file_contents(DATA_VIZ_SYSTEM_DESCRIPTION_FILE)
-ERROR_HANDLING_SYSTEM_DESCRIPTION = read_file_contents(ERROR_HANDLING_SYSTEM_DESCRIPTION_FILE)
-CODE_SAFETY_SYSTEM_DESCRIPTION = read_file_contents(CODE_SAFETY_SYSTEM_DESCRIPTION_FILE)
+DATA_VIZ_SYSTEM_DESCRIPTION = read_file_contents(
+    DATA_VIZ_SYSTEM_DESCRIPTION_FILE)
+DATA_VIZ_SYSTEM_DESCRIPTION = DATA_VIZ_SYSTEM_DESCRIPTION.replace(
+    '[METADATA_SUMMARY]', get_summary())
+ERROR_HANDLING_SYSTEM_DESCRIPTION = read_file_contents(
+    ERROR_HANDLING_SYSTEM_DESCRIPTION_FILE)
+CODE_SAFETY_SYSTEM_DESCRIPTION = read_file_contents(
+    CODE_SAFETY_SYSTEM_DESCRIPTION_FILE)
 
 DATA_VIZ_MODEL = 'gpt-4'
 ERROR_HANDLING_MODEL = 'gpt-3.5-turbo'
@@ -271,6 +282,9 @@ def execute_output():
         script_code = f.read()
     try:
         exec(script_code, {}, {})
+        conversation.configure(state='normal')
+        conversation.insert(tk.END, "Executed error-handling-output.py.\n")
+        conversation.configure(state='disabled')
         if VERBOSE:
             print('Used exec')
     except Exception as err:
@@ -278,6 +292,9 @@ def execute_output():
         # Sometimes exec fails, maybe not as robust as full python interpreter
         try:
             os.system("python3 error-handling-output.py")
+            conversation.configure(state='normal')
+            conversation.insert(tk.END, "Executed error-handling-output.py.\n")
+            conversation.configure(state='disabled')
             if VERBOSE:
                 print('Used os.system')
         except Exception as err2:
@@ -310,6 +327,7 @@ def exit_program():
     Function to save chat history and close the application.
     """
     save_chat_history()
+    root.quit()
     root.destroy()
 
 def add_placeholder_to(entry, placeholder, color='grey'):
@@ -370,3 +388,4 @@ if __name__ == '__main__':
     root.protocol("WM_DELETE_WINDOW", exit_program)
 
     root.mainloop()
+    sys.exit()

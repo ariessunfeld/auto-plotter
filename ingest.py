@@ -60,6 +60,10 @@ def summarize_csvs(data_folder, max_rows_scan, max_cols_summary):
 
 def get_summary():
     logging.basicConfig(filename='csv_summary.log', level=logging.INFO)
-    summary = summarize_csvs(DATA_FOLDER, MAX_ROWS_SCAN, MAX_COLS_SUMMARY)
+    _summary = summarize_csvs(DATA_FOLDER, MAX_ROWS_SCAN, MAX_COLS_SUMMARY)
     # TODO add parsing/summarization for other filetypes
+    summary = ''
+    for key, val in dict(_summary).items():
+        summary += str(key) + ': ' + str(val) + ', '
+    summary = '{' + summary + '}'
     return summary
