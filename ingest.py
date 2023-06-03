@@ -1,69 +1,66 @@
 import pandas as pd
-import sys
 import os
+import logging
+from collections import defaultdict
+from pathlib import Path
 
-DATA_FOLDER = 'data'
-MAX_ROWS_TO_SCAN = 16
+DATA_FOLDER = Path('data')
+MAX_ROWS_SCAN = 16
+MAX_COLS_SUMMARY = 100
 
-def find_header_row(file, max_rows_to_scan):
+def find_header_row(file, max_rows_scan):
     """Returns the 'best' header row for a CSV file"""
     
-    min_score = float('inf')  # Start with infinity so any score will be less
+    min_score = float('inf')
     best_header_row = None
 
     try:
         df = pd.read_csv(file)
     except FileNotFoundError:
-        print(f'Could not find {file}')
+        logging.error(f'Could not find {file}')
         return None
 
-    length = len(df)
-    n_rows_to_search = min(length-1, max_rows_to_scan)
+    n_rows_search = min(len(df)-1, max_rows_scan)
 
-    # Loop over the first n rows
-    for i in range(n_rows_to_search):
-        # Try reading in the data with the current row as the header
-        df = pd.read_csv(file, header=i, nrows=n_rows_to_search+1)
+    for i in range(n_rows_search):
+        df = pd.read_csv(file, header=i, nrows=n_rows_search+1)
 
-        # Convert the column names to a list
         columns = df.columns.tolist()
-
-        # Score based on number of "unnamed" in the column names
         num_unnamed = sum('unnamed' in name.lower() for name in columns)
-
-        # Score based on number of unique column names
         num_unique = len(set(columns))
-
-        # Score based on consistency of data types in each column
         type_consistency = sum(df[col].apply(type).nunique() == 1 for col in df.columns)
 
-        # Combine the scores into a total score
-        # For this example, we'll simply add them, but you could consider other ways to combine the scores
         total_score = num_unnamed - num_unique - type_consistency
 
-        # If this is the lowest score we've seen so far, update our best guess for the header row
         if total_score < min_score:
             min_score = total_score
             best_header_row = i
 
     return best_header_row
 
-def summarize_csvs(data_folder, max_rows_to_scan, max_cols_in_summary):
+def summarize_csvs(data_folder, max_rows_scan, max_cols_summary):
 
-    files = [os.path.join(data_folder, f) for f in os.listdir(data_folder)]
+    files = [file for file in data_folder.glob('*') if file.is_file() and file.name.endswith('.csv')]
 
-    summary = {}
+    summary = defaultdict(dict)
     for file in files:
-        if file.endswith('.csv'):
-            summary[file] = {}
-            summary[file]['header row'] = find_header_row(file, max_rows_to_scan)
-            df = pd.read_csv(file, header=summary[file]['header row'])
-            columns = df.columns.to_list()
-            del df
-            m = min(len(columns), max_cols_in_summary)
-            if m == len(columns):
-                summary[file]['columns'] = columns
-            else:
-                summary[file][f'first {max_cols_in_summary} columns'] = columns[:max_cols_in_summary]
+        summary[file]['header row'] = find_header_row(file, max_rows_scan)
 
+        if summary[file]['header row'] is not None:
+            try:
+                df = pd.read_csv(file, header=summary[file]['header row'])
+                columns = df.columns.to_list()
+                del df
+
+                summary[file]['columns'] = columns[:max_cols_summary] if len(columns) > max_cols_summary else columns
+
+            except pd.errors.ParserError as e:
+                logging.error(f'Error parsing {file}: {e}')
+                
+    return summary
+
+def get_summary():
+    logging.basicConfig(filename='csv_summary.log', level=logging.INFO)
+    summary = summarize_csvs(DATA_FOLDER, MAX_ROWS_SCAN, MAX_COLS_SUMMARY)
+    # TODO add parsing/summarization for other filetypes
     return summary
