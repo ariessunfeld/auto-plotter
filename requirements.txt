@@ -1,4 +1,6 @@
 openai
+openpyxl
 plotly
 python-dotenv
+scipy
 seaborn

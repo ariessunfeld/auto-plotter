@@ -7,7 +7,7 @@ from tkinter import ttk
 from datetime import datetime
 from dotenv import load_dotenv
 
-from ingest import get_summary
+from ingest import get_natural_language_summary
 
 load_dotenv()
 
@@ -36,7 +36,7 @@ CODE_SAFETY_SYSTEM_DESCRIPTION_FILE =  os.path.join(
 DATA_VIZ_SYSTEM_DESCRIPTION = read_file_contents(
     DATA_VIZ_SYSTEM_DESCRIPTION_FILE)
 DATA_VIZ_SYSTEM_DESCRIPTION = DATA_VIZ_SYSTEM_DESCRIPTION.replace(
-    '[METADATA_SUMMARY]', get_summary())
+    '[METADATA_SUMMARY]', str(get_natural_language_summary()))
 ERROR_HANDLING_SYSTEM_DESCRIPTION = read_file_contents(
     ERROR_HANDLING_SYSTEM_DESCRIPTION_FILE)
 CODE_SAFETY_SYSTEM_DESCRIPTION = read_file_contents(
@@ -48,6 +48,7 @@ CODE_SAFETY_MODEL = 'gpt-3.5-turbo'
 
 VERBOSE = False
 MAX_RETRIES = 3
+FIRST_MESSAGE_SENT = False
 
 def check_file_exists():
     """
@@ -144,11 +145,32 @@ def send_message():
     Function to manage user messages, perform OpenAI completions, process responses, and update GUI accordingly.
     """
     message = user_input.get()
+    message_copy = message
+    print(previous_messages)
+
+    #if not previous_messages:
+    #    message = """
+    #    All files are located in a folder called `data`. 
+    #    Here is a metadata summary for these files.
+    #    [METADATA_SUMMARY]
+    #    For each CSV file, it tells you which header row to use, and what the column names are. 
+    #    For each XLSX file, it tells you, for each sheet in that file, which header row to use, and what the column names are.        
+    #    For example, if the summary contains the text {'XLSX' : {'data/file1.xlsx': {'Sheet1': {'header row': 1, ...}}}}, this means to use `pd.read_excel('data/file1.xlsx', 'Sheet1', header=1)` in your code. 
+    #    If one of the column names the user mentions does not exactly match these columns, use your best judgement to figure out which column(s) the user intends.
+    #    Do NOT include this summary in your response or in the code you write.
+    #    This summary is being provided to you as additional context to help with your code writing. Do not repeat it.
+    #    Here is the user's prompt:
+    #    """.replace('[METADATA_SUMMARY]', str(get_summary())) + f'\n\n{message}'
+
+    #if not previous_messages:
+    #    message =  'METADATA SUMMARY (may include more information than needed for user prompt):\n'
+    #    message += '[METADATA_SUMMARY]\n'.replace('[METADATA_SUMMARY]', str(get_natural_language_summary()))
+    #message_copy = 'USER PROMPT: ' + message_copy + '\n' + message
 
     # Update GUI
     conversation.configure(state='normal')
     conversation.insert(tk.END, "You: ", "bold")
-    conversation.insert(tk.END, message + "\n")
+    conversation.insert(tk.END, message_copy + "\n")
     conversation.configure(state='disabled')
     user_input.delete(0, tk.END)
     
@@ -156,6 +178,7 @@ def send_message():
 
     time.sleep(1)
 
+    # Print status
     conversation.configure(state='normal')
     conversation.insert(tk.END, "Data Viz Assistant: ", "bold")
     conversation.insert(tk.END, "Thinking...")
@@ -165,12 +188,14 @@ def send_message():
 
     print('Thinking...')
 
+    # Pass message to data viz assistant and get response, writing to output.py
     response = get_response(
         DATA_VIZ_MODEL, DATA_VIZ_SYSTEM_DESCRIPTION, previous_messages, message, 0)
     assistant_response = process_openai_response(response)
     write_file('output.py', assistant_response)
     print('Done thinking. Preliminary code written to output.py.')
 
+    # Print status
     if VERBOSE:
         conversation.configure(state='normal')
         conversation.delete("end - 12 chars", "end")
@@ -191,12 +216,14 @@ def send_message():
 
     print('Now polishing code with error handling...')
 
+    # Pass data viz code to error handling code
     response = get_response(
         ERROR_HANDLING_MODEL, ERROR_HANDLING_SYSTEM_DESCRIPTION, [], assistant_response, 0)
     error_handling_response = process_openai_response(response)
     write_file('error-handling-output.py', error_handling_response)
     print('Done adding error handling. Polished code was written to error-handling-output.py.')
 
+    # Display status
     if VERBOSE:
         conversation.configure(state='normal')
         conversation.delete("end - 42 chars", "end")
@@ -217,9 +244,12 @@ def send_message():
 
     print('Now analyzing code safety...')
 
+    # Pass error-handling code to safety analyst
     response = get_response(
         CODE_SAFETY_MODEL, CODE_SAFETY_SYSTEM_DESCRIPTION, [], error_handling_response, 0)
     safety_response = response.choices[0].message["content"]
+
+    # Display status
 
     # Dangerous case
     if not safety_response.startswith('All clear'):
@@ -256,9 +286,10 @@ def send_message():
 
     root.update_idletasks()
 
+    # Update previous messages
     previous_messages.extend([
-        {"role": "user", "content": message},
-        {"role": "assistant", "content": assistant_response},
+        {"role": "user", "content": message_copy},
+        {"role": "system", "content": assistant_response},
     ])
 
     check_file_exists()
@@ -339,6 +370,8 @@ def add_placeholder_to(entry, placeholder, color='grey'):
 if __name__ == '__main__':
 
     #atexit.register(save_chat_history)
+
+    FIRST_MESSAGE_SENT = False
 
     print('Booting up...')
 
